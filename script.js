@@ -207,6 +207,10 @@ function getCategoryLabel(key) {
   return found ? found.label : key;
 }
 
+function parsePrice(priceStr) {
+  return parseFloat(priceStr.replace(/[$,]/g, ''));
+}
+
 /* ================================================================
    CART: AGREGAR
    ================================================================ */
@@ -283,7 +287,9 @@ function renderCart() {
   }
 
   footer.classList.remove('d-none');
+  const totalPrice = cart.reduce((sum, item) => sum + parsePrice(item.price) * item.qty, 0);
   totalSpan.textContent = `${totalQty} producto${totalQty !== 1 ? 's' : ''}`;
+  document.getElementById('cartTotalPrice').textContent = `$${totalPrice.toFixed(2)}`;
 
   body.innerHTML = cart.map(item => `
     <div class="cart-item">
@@ -329,6 +335,7 @@ function sendWhatsApp() {
   }
 
   let msg = 'Hola, quiero cotizar estos productos:\n\n';
+  let granTotal = 0;
 
   cart.forEach((item, i) => {
     const specialUnits = {
@@ -341,13 +348,21 @@ function sendWhatsApp() {
     };
     const su = specialUnits[item.id];
     const displayUnit = su || '';
-    msg += `${i + 1}. ${item.name} — Cantidad: ${item.qty}${displayUnit}\n`;
+    const unitPrice = parsePrice(item.price);
+    const lineTotal = unitPrice * item.qty;
+    granTotal += lineTotal;
+    msg += `${i + 1}. ${item.name}\n`;
+    msg += `   Precio: ${item.price} × ${item.qty}${displayUnit} = $${lineTotal.toFixed(2)}\n`;
   });
 
-  msg += `\nNombre del cliente:\n¿Tienen disponibilidad?\n¿Me pueden dar precio final?`;
+  msg += `\n💰 Total a pagar: $${granTotal.toFixed(2)}`;
+  msg += `\n\n¿Tienen disponibilidad?\n¿Me pueden dar precio final?`;
 
   const url = `${WHATSAPP_URL}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
+  cart = [];
+  renderProducts(activeCategory);
+  renderCart();
   closeCart();
 }
 
